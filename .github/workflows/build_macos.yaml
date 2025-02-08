@@ -96,7 +96,7 @@ jobs:
       - name: Upload build-angle as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-angle/
+          name: build-angle
           path: build/angle/
           if-no-files-found: warn
           compression-level: 6
