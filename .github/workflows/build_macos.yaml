@@ -83,40 +83,40 @@ jobs:
             meson install -C build/virglrenderer
           fi
 
-      - name: Upload source/angle/include as artifact
+      - name: Upload source-angle-include as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: source/angle/include
+          name: source-angle-include
           path: source/angle/include
           if-no-files-found: warn
           compression-level: 6
           overwrite: false
           include-hidden-files: true
 
-      - name: Upload build/angle as artifact
+      - name: Upload build-angle as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build/angle/
+          name: build-angle/
           path: build/angle/
           if-no-files-found: warn
           compression-level: 6
           overwrite: false
           include-hidden-files: true    
 
-      - name: Upload virglrenderer as artifact
+      - name: Upload build-virglrenderer as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build/virglrenderer
+          name: build-virglrenderer
           path: build/virglrenderer
           if-no-files-found: warn
           compression-level: 6
           overwrite: false
           include-hidden-files: true
 
-      - name: Upload libepoxy as artifact
+      - name: Upload build-libepoxy as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build/libepoxy
+          name: build-libepoxy
           path: build/libepoxy
           if-no-files-found: warn
           compression-level: 6
