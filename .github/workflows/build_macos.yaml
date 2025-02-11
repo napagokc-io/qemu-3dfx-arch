@@ -24,8 +24,7 @@ jobs:
           brew install --cask xquartz || true
           brew install autoconf-archive binutils cyrus-sasl devutils GStreamer gtk+ gtk+3 jack jpeg libgcrypt || True
           brew install libiscsi libnfs libssh2 libx11 libxkbcommon libxml2 libxxf86vm mesa opus sdl12-compat sdl2 sdl2_image || True
-          brew install sphinx-doc tree usbredir wget zlib || True
-          brew link jpeg || True          
+          brew install sphinx-doc tree usbredir wget zlib || True                  
 
       - name: Cache depot_tools, angle, virglrenderer, libepoxy, and include
         id: cache-depot-tools-angle-virglrenderer-libepoxy-include
