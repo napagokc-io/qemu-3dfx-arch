@@ -17,7 +17,18 @@ jobs:
       PKG_CONFIG_PATH: "/opt/homebrew/opt/cyrus-sasl/lib/pkgconfig:/opt/homebrew/opt/zlib/lib/pkgconfig:/opt/homebrew/opt/jpeg/lib/pkgconfig:/opt/homebrew/opt/libxml2/lib/pkgconfig:/opt/homebrew/opt/xz/lib/pkgconfig:/opt/homebrew/opt/gnutls/lib/pkgconfig:/Users/runner/work/qemu-3dfx-arch/qemu-3dfx-arch/lib/pkgconfig:/opt/local/lib/pkgconfig"
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4      
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew
+            ~/Library/Logs/Homebrew
+          key: ${{ runner.os }}-brew-${{ hashFiles('**/Brewfile.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-brew-
       
       - name: Install dependencies
         run: |                  
@@ -27,31 +38,46 @@ jobs:
           brew install libiscsi libnfs libssh2 libx11 libxkbcommon libxml2 libxxf86vm mesa opus sdl12-compat sdl2 sdl2_image || True
           brew install sphinx-doc tree usbredir wget zlib || True                  
 
-      - name: Cache depot_tools, angle, virglrenderer, libepoxy, and include
-        id: cache-depot-tools-angle-virglrenderer-libepoxy-include
-        if: always()
+      - name: Cache build
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: ${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+
+      - name: Cache include and lib directories
+        id: cache-include-lib
         uses: actions/cache@v4
         with:
           path: |
-            depot_tools
-            source/angle/include
-            build/angle
-            build/virglrenderer
-            build/libepoxy
-            include
-          key: ${{ runner.os }}-depot-tools-angle-virglrenderer-libepoxy-include-${{ hashFiles('**/depot_tools/**', '**/source/angle/include/**', '**/build/angle/**', '**/build/virglrenderer/**', '**/build/libepoxy/**', '**/include/**') }}
-          restore-keys: |          
-            ${{ runner.os }}-depot-tools-angle-virglrenderer-libepoxy-include-
-        env:
-          pkgver: '9.2.50'
-          ACTIONS_STEP_DEBUG: true      
+            ${{ github.workspace }}/include
+            ${{ github.workspace }}/lib
+          key: ${{ runner.os }}-include-lib-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-include-lib-
+
+      - name: Cache depot_tools and angle directories
+        id: cache-depot-angle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/depot_tools
+            ${{ github.workspace }}/source/angle/include
+          key: ${{ runner.os }}-depot-angle-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-depot-angle-
+
 
       - name: Clean working directory
+        continue-on-error: true
         run: git clean -fdx -e depot_tools -e source/angle/include -e build/angle -e build/virglrenderer -e build/libepoxy -e include -e lib      
 
       - name: Set up environment macos Virgl
         run: |
-          if [ "${{ steps.cache-depot-tools-angle-virglrenderer-libepoxy-include.outputs.cache-hit }}" != 'true' ]; then
+          if [ "${{ steps.cache-include-lib.outputs.cache-hit }}" != 'true' ]; then
+          echo "Cache not found, setting up environment..."
             set -eux
             mkdir -p depot_tools build/qemu source/angle source/libepoxy source/virglrenderer source/qemu
             git -C depot_tools init
@@ -80,11 +106,27 @@ jobs:
             gn gen --args=is_debug=false ../../build/angle
             cd ../..
             ninja -C build/angle
-            [ -e build/libepoxy/meson-info ] || meson setup "-Dc_args=-I$PWD/source/angle/include" -Degl=yes -Dx11=false "--prefix=$PWD" build/libepoxy source/libepoxy
+            echo "Setting up libepoxy build"
+            meson setup "-Dc_args=-I$PWD/source/angle/include" -Degl=yes -Dx11=false "--prefix=$PWD" build/libepoxy source/libepoxy
+            echo "Installing libepoxy"
             meson install -C build/libepoxy
-            [ -e build/virglrenderer/meson-info ] || meson setup "-Dc_args=-I$PWD/source/angle/include" "--pkg-config-path=$PWD/lib/pkgconfig" "--prefix=$PWD" build/virglrenderer source/virglrenderer
+            echo "Setting up virglrenderer build"
+            meson setup "-Dc_args=-I$PWD/source/angle/include" "--pkg-config-path=$PWD/lib/pkgconfig" "--prefix=$PWD" build/virglrenderer source/virglrenderer
+            echo "Installing virglrenderer"
             meson install -C build/virglrenderer
+          else
+            echo "Using cached include and lib directories."
           fi
+
+      - name: Cache installed include and lib files
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/include
+            ${{ github.workspace }}/lib
+          key: ${{ runner.os }}-include-lib-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-include-lib-
 
       - name: Upload source-angle-include as artifact
         uses: actions/upload-artifact@v4
@@ -159,7 +201,7 @@ jobs:
       - name: Fetch and checkout QEMU source
         continue-on-error: true
         run: |
-          if [ "${{ steps.cache-depot-tools-angle-virglrenderer-libepoxy-include.outputs.cache-hit }}" == 'true' ]; then
+          if [ "${{ steps.cache-include-lib.outputs.cache-hit }}" == 'true' ]; then
             cd source
             echo "Downloading src"
             wget -q https://download.qemu.org/qemu-${{ env.pkgver }}.tar.xz
@@ -171,14 +213,14 @@ jobs:
 
       - name: Create build/qemu directory        
         run: |
-          if [ "${{ steps.cache-depot-tools-angle-virglrenderer-libepoxy-include.outputs.cache-hit }}" == 'true' ]; then
+          if [ "${{ steps.cache-include-lib.outputs.cache-hit }}" == 'true' ]; then
             mkdir -p build/qemu
           fi
 
       - name: Prepare Angle
         continue-on-error: true
         run: |
-          if [ "${{ steps.cache-depot-tools-angle-virglrenderer-libepoxy-include.outputs.cache-hit }}" == 'true' ]; then
+          if [ "${{ steps.cache-include-lib.outputs.cache-hit }}" == 'true' ]; then
             export DEPOT_TOOLS_UPDATE=0
             export PATH="$PWD/depot_tools:$PATH"          
           fi     
