@@ -187,16 +187,16 @@ jobs:
         run: mkdir -p install_dir
 
       - name: Patching build
-       shell: bash
-       continue-on-error: true
-       run:  |
-        echo "Adding files to src"
-        rsync -rv qemu-0/hw/3dfx qemu-1/hw/mesa source/qemu-${{ env.pkgver }}/hw/
-        cd source/qemu-${{ env.pkgver }}
-        echo "Patching files to src"
-        patch -p0 -i ../../${{ env.patch }}
-        echo "Signing commit id to src"
-        bash ../../scripts/sign_commit
+        shell: bash
+        continue-on-error: true
+        run:  |
+          echo "Adding files to src"
+          rsync -rv qemu-0/hw/3dfx qemu-1/hw/mesa source/qemu-${{ env.pkgver }}/hw/
+          cd source/qemu-${{ env.pkgver }}
+          echo "Patching files to src"
+          patch -p0 -i ../../${{ env.patch }}
+          echo "Signing commit id to src"
+          bash ../../scripts/sign_commit
 
       - name: Configure Qemu build
         continue-on-error: true
