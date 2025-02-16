@@ -749,6 +749,48 @@ diff -Nru ../orig/qemu-9.2.0/audio/coreaudio.m ./audio/coreaudio.m
      .voice_size_in  = 0
  };
  
+ diff -Nru ../orig/qemu-9.2.0/block/nfs.c ./block/nfs.c
+--- ../orig/qemu-9.2.0/block/nfs.c
++++ ./block/nfs.c
+@@ -47,7 +47,6 @@
+ #include "qapi/qobject-output-visitor.h"
+ #include <nfsc/libnfs.h>
+ 
+-
+ #define QEMU_NFS_MAX_READAHEAD_SIZE 1048576
+ #define QEMU_NFS_MAX_PAGECACHE_SIZE (8388608 / NFS_BLKSIZE)
+ #define QEMU_NFS_MAX_DEBUG_LEVEL 2
+@@ -74,8 +73,11 @@
+     struct stat *st;
+     Coroutine *co;
+     NFSClient *client;
++    char *buf;
+ } NFSRPC;
+ 
++static void nfs_set_events(NFSClient *client);
++
+ static int nfs_parse_uri(const char *filename, QDict *options, Error **errp)
+ {
+     g_autoptr(GUri) uri = g_uri_parse(filename, G_URI_FLAGS_NONE, NULL);
+@@ -272,7 +274,7 @@
+ 
+     WITH_QEMU_LOCK_GUARD(&client->mutex) {
+         if (nfs_pread_async(client->context, client->fh,
+-                            offset, bytes, nfs_co_generic_cb, &task) != 0) {
++                            task.buf, bytes, offset, nfs_co_generic_cb, &task) != 0) {
+             return -ENOMEM;
+         }
+ 
+@@ -318,8 +320,7 @@
+ 
+     WITH_QEMU_LOCK_GUARD(&client->mutex) {
+         if (nfs_pwrite_async(client->context, client->fh,
+-                             offset, bytes, buf,
+-                             nfs_co_generic_cb, &task) != 0) {
++                             buf, bytes, offset, nfs_co_generic_cb, &task) != 0) {
+             if (my_buffer) {
+                 g_free(buf);
+             }
 diff -Nru ../orig/qemu-9.2.0/hw/display/virtio-gpu-virgl.c ./hw/display/virtio-gpu-virgl.c
 --- ../orig/qemu-9.2.0/hw/display/virtio-gpu-virgl.c
 +++ ./hw/display/virtio-gpu-virgl.c
@@ -1257,21 +1299,22 @@ diff -Nru ../orig/qemu-9.2.0/qemu-options.hx ./qemu-options.hx
 diff -Nru ../orig/qemu-9.2.0/system/vl.c ./system/vl.c
 --- ../orig/qemu-9.2.0/system/vl.c
 +++ ./system/vl.c
-@@ -871,6 +871,13 @@
+@@ -871,6 +871,14 @@
      return default_machineclass;
  }
  
++#define ALIGNED(x) __attribute__((aligned(x)))
++
 +static void feature(void)
 +{
-+    const char rev_[ALIGNED(1)]
-+        ;
-+    printf("  featuring qemu-3dfx-arch@%s"__TIME__" "__DATE__" stable build\n", rev_);
++    const char rev_[ALIGNED(1)] = "rev";
++    printf("  featuring qemu-3dfx-arch@%s " __TIME__ " " __DATE__ " stable build\n", rev_);
 +}
 +
  static void version(void)
  {
      printf("QEMU emulator version " QEMU_FULL_VERSION "\n"
-@@ -3004,6 +3011,7 @@
+@@ -3004,6 +3012,7 @@
                  break;
              case QEMU_OPTION_version:
                  version();
