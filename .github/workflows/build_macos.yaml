@@ -80,9 +80,9 @@ jobs:
           echo "Cache not found, setting up environment..."
             set -eux
             rm -rf include/*
-            rm -rf include/.*
+            find include/.* -maxdepth 1 -mindepth 1 -exec rm -rf {} +
             rm -rf lib/*
-            rm -rf lib/.*
+            find lib/.* -maxdepth 1 -mindepth 1 -exec rm -rf {} +
             mkdir -p depot_tools build/qemu source/angle source/libepoxy source/virglrenderer source/qemu
             git -C depot_tools init
             git -C depot_tools fetch https://chromium.googlesource.com/chromium/tools/depot_tools 22df6f8e622dc3e8df8dc8b5d3e3503b169af78e
