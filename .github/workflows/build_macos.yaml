@@ -76,7 +76,7 @@ jobs:
 
       - name: Set up environment macos Virgl
         run: |
-          if [ "${{ steps.cache-include-lib.outputs.cache-hit }}" != 'true' ]; then
+          if [ -d "include" ] && [ "$(ls -A include)" ] && [ -d "lib" ] && [ "$(ls -A lib)" ]; then
           echo "Cache not found, setting up environment..."
             set -eux
             rm -rf include/*
