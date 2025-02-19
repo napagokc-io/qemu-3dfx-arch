@@ -1,13 +1,13 @@
 #!/bin/sh
 
 TOP=.
-GIT=`echo $@ | sed "s/\-git=\(.*\)/\1/;s/\ .*//"`
-if [ -z $GIT ]; then GIT=.; else shift; fi;
-ARG=$@; if [ -z $ARG ]; then ARG=HEAD; fi
-REV=`cd $GIT; git rev-parse $ARG | sed "s/\(.......\).*/\1\-/"`
+GIT=$(echo "$@" | sed "s/\-git=\(.*\)/\1/;s/\ .*//")
+if [ -z "$GIT" ]; then GIT=.; else shift; fi;
+ARG=$@; if [ -z "$ARG" ]; then ARG=HEAD; fi
+REV=$(cd $GIT; git rev-parse "$ARG" | sed "s/\(.......\).*/\1-/")
 MODS=$(cat $TOP/target/i386/meson.build | tail -n 2 | head -n 1 | \
     sed "s/.*:\ //;s/\}//")
-if [ -z $REV ] || [ -z $MODS ]; then exit 1; fi
+if [ -z "$REV" ] || [ -z "$MODS" ]; then exit 1; fi
 sed -i -e "s/i386_ss/$MODS/" \
     $TOP/hw/3dfx/meson.build \
     $TOP/hw/mesa/meson.build \
@@ -17,8 +17,35 @@ SRC=" \
     $TOP/hw/3dfx/g2xfuncs.h \
     $TOP/hw/mesa/mglfuncs.h \
     $VLC \
-" \
+"
 
 echo $REV
-sed -i -e "s/\(rev_\[\).*\].*/\1\]\ =\ \"$REV\"/" $SRC
-grep "rev_\[" $SRC | sed "s/\(rev_\[\).*\].*/\1\]\ =\ \"$REV\"/"
+sed -i -e "s/\(rev_\[\).*\].*/\1\] = \"$REV\"/" $SRC
+grep "rev_\[" $SRC | sed "s/\(rev_\[\).*\].*/\1\] = \"$REV\"/"
+
+diff -Nru ../orig/qemu-9.2.0/system/vl.c ./system/vl.c
+--- ../orig/qemu-9.2.0/system/vl.c	2024-12-10 18:46:37.000000000 -0500
++++ ./system/vl.c	2025-02-16 23:22:23.382437700 -0500
+@@ -871,6 +871,14 @@
+     return default_machineclass;
+ }
+
++#define ALIGNED(x) __attribute__((aligned(x)))
++
++static void feature(void)
++{
++    const char rev_[] = "f22aa84-";
++    printf("  featuring qemu-3dfx-arch@%s " __TIME__ " " __DATE__ " stable build\n", rev_);
++}
++
+ static void version(void)
+ {
+     printf("QEMU emulator version " QEMU_FULL_VERSION "\n"
+@@ -3004,6 +3012,7 @@
+                 break;
+             case QEMU_OPTION_version:
+                 version();
++                feature();
+                 exit(0);
+                 break;
+             case QEMU_OPTION_m:
