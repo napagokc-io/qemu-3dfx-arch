@@ -25,7 +25,7 @@ grep "rev_\[" $SRC | sed "s/\(rev_\[\).*\].*/\1\] = \"$REV\"/"
 
 diff -Nru ../orig/qemu-9.2.0/system/vl.c ./system/vl.c
 --- ../orig/qemu-9.2.0/system/vl.c	2024-12-10 18:46:37.000000000 -0500
-+++ ./system/vl.c	2025-02-16 23:22:23.382437700 -0500
++++ ./system/vl.c	2025-02-19 16:22:53.394266200 -0500
 @@ -871,6 +871,14 @@
      return default_machineclass;
  }
