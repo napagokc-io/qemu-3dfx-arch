@@ -764,7 +764,7 @@ diff -Nru ../orig/qemu-9.2.0/audio/coreaudio.m ./audio/coreaudio.m
      struct stat *st;
      Coroutine *co;
      NFSClient *client;
-+    char *buf;
++    void *buf;
  } NFSRPC;
  
 +static void nfs_set_events(NFSClient *client);
@@ -772,25 +772,95 @@ diff -Nru ../orig/qemu-9.2.0/audio/coreaudio.m ./audio/coreaudio.m
  static int nfs_parse_uri(const char *filename, QDict *options, Error **errp)
  {
      g_autoptr(GUri) uri = g_uri_parse(filename, G_URI_FLAGS_NONE, NULL);
-@@ -272,7 +274,7 @@
+@@ -268,8 +270,19 @@
+     NFSRPC task;
  
+     nfs_co_init_task(bs, &task);
+-    task.iov = iov;
++#ifdef LIBNFS_API_V2
++    WITH_QEMU_LOCK_GUARD(&client->mutex) {
++        if (nfs_pread_async(client->context, client->fh,
++                            iov->iov[0].iov_base,
++                            bytes > iov->iov[0].iov_len ? iov->iov[0].iov_len : bytes,
++                            offset, nfs_co_generic_cb, &task) != 0) {
++            return -ENOMEM;
++        }
+ 
++        nfs_set_events(client);
++    }
++#else
++    task.iov = iov;
      WITH_QEMU_LOCK_GUARD(&client->mutex) {
          if (nfs_pread_async(client->context, client->fh,
--                            offset, bytes, nfs_co_generic_cb, &task) != 0) {
-+                            task.buf, bytes, offset, nfs_co_generic_cb, &task) != 0) {
-             return -ENOMEM;
-         }
+                             offset, bytes, nfs_co_generic_cb, &task) != 0) {
+@@ -278,6 +291,7 @@
  
-@@ -318,8 +320,7 @@
+         nfs_set_events(client);
+     }
++#endif
+     while (!task.complete) {
+         qemu_coroutine_yield();
+     }
+@@ -300,26 +314,30 @@
+ {
+     NFSClient *client = bs->opaque;
+     NFSRPC task;
+-    char *buf = NULL;
++    void *buf = NULL;
+     bool my_buffer = false;
+ 
+     nfs_co_init_task(bs, &task);
++    task.buf = buf;
+ 
+-    if (iov->niov != 1) {
+-        buf = g_try_malloc(bytes);
+-        if (bytes && buf == NULL) {
+-            return -ENOMEM;
+-        }
+-        qemu_iovec_to_buf(iov, 0, buf, bytes);
+-        my_buffer = true;
+-    } else {
++    if (iov->niov == 1) {
+         buf = iov->iov[0].iov_base;
++    } else {
++        buf = g_malloc0(bytes);
++        my_buffer = true;
++        qemu_iovec_to_buf(iov, 0, buf, bytes);
+     }
  
      WITH_QEMU_LOCK_GUARD(&client->mutex) {
++#ifdef LIBNFS_API_V2
++        if (nfs_pwrite_async(client->context, client->fh,
++                             buf, bytes, offset,
++                             nfs_co_generic_cb, &task) != 0) {
++#else
          if (nfs_pwrite_async(client->context, client->fh,
--                             offset, bytes, buf,
--                             nfs_co_generic_cb, &task) != 0) {
-+                             buf, bytes, offset, nfs_co_generic_cb, &task) != 0) {
+                              offset, bytes, buf,
+                              nfs_co_generic_cb, &task) != 0) {
++#endif
              if (my_buffer) {
                  g_free(buf);
              }
+@@ -332,12 +350,15 @@
+         qemu_coroutine_yield();
+     }
+ 
+-    if (my_buffer) {
+-        g_free(buf);
++    if (task.ret < 0) {
++        if (my_buffer) {
++            g_free(buf);
++        }
++        return task.ret;
+     }
+ 
+-    if (task.ret != bytes) {
+-        return task.ret < 0 ? task.ret : -EIO;
++    if (my_buffer) {
++        g_free(buf);
+     }
+ 
+     return 0;
 diff -Nru ../orig/qemu-9.2.0/hw/display/virtio-gpu-virgl.c ./hw/display/virtio-gpu-virgl.c
 --- ../orig/qemu-9.2.0/hw/display/virtio-gpu-virgl.c
 +++ ./hw/display/virtio-gpu-virgl.c
@@ -2729,7 +2799,7 @@ diff -Nru ../orig/qemu-9.2.0/ui/egl-helpers.c ./ui/egl-helpers.c
  
  /* ---------------------------------------------------------------------- */
  
-+static int qemu_egl_init_dpy(EGLDisplay dpy, DisplayGLMode mode)
++static int qemu_egl_init_dpy(EGLDisplay dpy, EGLNativeDisplayType native, DisplayGLMode mode)
 +{
 +    static const EGLint conf_att_core[] = {
 +        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -2790,7 +2860,7 @@ diff -Nru ../orig/qemu-9.2.0/ui/egl-helpers.c ./ui/egl-helpers.c
 +        return -1;
 +    }
 +
-+    return qemu_egl_init_dpy(dpy, mode);
++    return qemu_egl_init_dpy(dpy, EGL_DEFAULT_DISPLAY, mode);
 +}
 +
  #if defined(CONFIG_X11) || defined(CONFIG_GBM) || defined(WIN32)
@@ -2845,11 +2915,9 @@ diff -Nru ../orig/qemu-9.2.0/ui/egl-helpers.c ./ui/egl-helpers.c
 -    qemu_egl_display = qemu_egl_get_display(dpy, platform);
 -    if (qemu_egl_display == EGL_NO_DISPLAY) {
 -        error_report("egl: eglGetDisplay failed: %s", qemu_egl_get_error_string());
-+    if (dpy == EGL_NO_DISPLAY) {
-+        error_report("egl: eglGetDisplay failed");
-         return -1;
-     }
- 
+-        return -1;
+-    }
+-
 -    b = eglInitialize(qemu_egl_display, &major, &minor);
 -    if (b == EGL_FALSE) {
 -        error_report("egl: eglInitialize failed: %s", qemu_egl_get_error_string());
@@ -2869,12 +2937,14 @@ diff -Nru ../orig/qemu-9.2.0/ui/egl-helpers.c ./ui/egl-helpers.c
 -    if (b == EGL_FALSE || n != 1) {
 -        error_report("egl: eglChooseConfig failed (%s mode): %s",
 -                     gles ? "gles" : "core", qemu_egl_get_error_string());
--        return -1;
--    }
--
++    if (dpy == EGL_NO_DISPLAY) {
++        error_report("egl: eglGetDisplay failed");
+         return -1;
+     }
+ 
 -    qemu_egl_mode = gles ? DISPLAY_GL_MODE_ES : DISPLAY_GL_MODE_CORE;
 -    return 0;
-+    return qemu_egl_init_dpy(dpy, mode);
++    return qemu_egl_init_dpy(dpy, native, mode);
  }
  
  #endif
@@ -3744,28 +3814,39 @@ diff -Nru ../orig/qemu-9.2.0/ui/shader/texture-blit.vert ./ui/shader/texture-bli
 diff -Nru ../orig/qemu-9.2.0/ui/shader.c ./ui/shader.c
 --- ../orig/qemu-9.2.0/ui/shader.c
 +++ ./ui/shader.c
-@@ -152,11 +152,19 @@
+@@ -152,17 +152,25 @@
  QemuGLShader *qemu_gl_init_shader(void)
  {
      QemuGLShader *gls = g_new0(QemuGLShader, 1);
+-
+-    gls->texture_blit_prog = qemu_gl_create_compile_link_program
+-        (texture_blit_vert_src, texture_blit_frag_src);
+-    gls->texture_blit_flip_prog = qemu_gl_create_compile_link_program
+-        (texture_blit_flip_vert_src, texture_blit_frag_src);
 +    const char *header = epoxy_is_desktop_gl() ? "#version 140\n" : "#version 300 es\n";
 +    char vert_src[256];
 +    char frag_src[256];
-+    char *vert_src_body = stpcpy(vert_src, header);
-+    char *frag_src_body = stpcpy(frag_src, header);
- 
-+    strcpy(vert_src_body, texture_blit_vert_src);
-+    strcpy(frag_src_body, texture_blit_frag_src);
-     gls->texture_blit_prog = qemu_gl_create_compile_link_program
--        (texture_blit_vert_src, texture_blit_frag_src);
-+        (vert_src, frag_src);
-+    strcpy(vert_src_body, texture_blit_flip_vert_src);
-     gls->texture_blit_flip_prog = qemu_gl_create_compile_link_program
--        (texture_blit_flip_vert_src, texture_blit_frag_src);
-+        (vert_src, frag_src);
++    
++    strcpy(vert_src, header);
++    strcat(vert_src, texture_blit_vert_src);
++    strcpy(frag_src, header);
++    strcat(frag_src, texture_blit_frag_src);
++    
++    gls->texture_blit_prog = qemu_gl_create_compile_link_program(vert_src, frag_src);
++    
++    strcpy(vert_src + strlen(header), texture_blit_flip_vert_src);
++    gls->texture_blit_flip_prog = qemu_gl_create_compile_link_program(vert_src, frag_src);
++    
      if (!gls->texture_blit_prog || !gls->texture_blit_flip_prog) {
          exit(1);
      }
+ 
+-    gls->texture_blit_vao =
+-        qemu_gl_init_texture_blit(gls->texture_blit_prog);
++    gls->texture_blit_vao = qemu_gl_init_texture_blit(gls->texture_blit_prog);
+ 
+     return gls;
+ }
 diff -Nru ../orig/qemu-9.2.0/ui/spice-display.c ./ui/spice-display.c
 --- ../orig/qemu-9.2.0/ui/spice-display.c
 +++ ./ui/spice-display.c
