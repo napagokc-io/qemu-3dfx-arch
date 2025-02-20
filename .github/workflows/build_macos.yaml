@@ -32,11 +32,11 @@ jobs:
       
       - name: Install dependencies
         run: |                  
-          brew install $(brew deps --include-build qemu) || True
+          brew install $(brew deps --include-build qemu) || true
           brew install --cask xquartz || true
-          brew install autoconf-archive binutils cyrus-sasl devutils GStreamer gtk+ gtk+3 jack jpeg libgcrypt || True
-          brew install libiscsi libnfs libssh2 libx11 libxkbcommon libxml2 libxxf86vm mesa opus sdl12-compat sdl2 sdl2_image || True
-          brew install sphinx-doc tree usbredir wget zlib || True                  
+          brew install autoconf-archive binutils cyrus-sasl devutils GStreamer gtk+ gtk+3 jack jpeg libgcrypt || true
+          brew install libiscsi libnfs libssh2 libx11 libxkbcommon libxml2 libxxf86vm mesa opus sdl12-compat sdl2 sdl2_image || true
+          brew install sphinx-doc tree usbredir wget zlib || true                  
 
       - name: Cache build
         id: cache-build
@@ -74,10 +74,10 @@ jobs:
         continue-on-error: true
         run: git clean -fdx -e depot_tools -e source/angle/include -e build/angle -e build/virglrenderer -e build/libepoxy -e include -e lib      
 
-      - name: Set up environment macos Virgl
+      - name: Set up environment macOS Virgl
         run: |
-          if [ -d "include" ] && [ "$(ls -A include)" ] && [ -d "lib" ] && [ "$(ls -A lib)" ]; then
-          echo "Cache not found, setting up environment..."
+          if [ ! -d "include" ] || [ ! "$(ls -A include)" ] || [ ! -d "lib" ] || [ ! "$(ls -A lib)" ]; then
+            echo "Cache not found, setting up environment..."
             set -eux
             rm -rf include/*
             find include/.* -maxdepth 1 -mindepth 1 -exec rm -rf {} +
@@ -213,7 +213,7 @@ jobs:
             tar xf qemu-${{ env.pkgver }}.tar.xz
             cd ..            
           fi
-          meson install -C build/libepoxy || True
+          meson install -C build/libepoxy || true
 
       - name: Create build/qemu directory        
         run: |
@@ -267,7 +267,7 @@ jobs:
         shell: bash
         run: |
           echo "Installing build to output"
-          make install || True
+          make install || true
           cd ../../install_dir
           bash ../../scripts/sign_binary          
           cat <<EOF > version.txt
