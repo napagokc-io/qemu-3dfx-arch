@@ -270,7 +270,24 @@ jobs:
         run: |
           echo "Installing build to output"
           make install || true
-          cd ../../install_dir
+
+      - name: Signing Binaries
+        shell: bash
+        continue-on-error: true
+        run: |
+          echo "Signing binaries"
+          cd install_dir
+          for binary in bin/qemu-system-*; do
+            if [[ "$binary" == *"-unsigned" ]]; then
+              ../source/qemu-${{ env.pkgver }}/scripts/entitlement.sh --install "$binary" "${binary}-unsigned" ../source/qemu-${{ env.pkgver }}/pc-bios/qemu.rsrc
+            fi
+          done
+          cd ..
+
+      - name: Finalize build
+        continue-on-error: true
+        run: |
+          cd install_dir
           bash ../scripts/sign_binary          
           cat <<EOF > version.txt
           QEMU-3dfx-arch (macOS Build)
