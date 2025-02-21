@@ -205,15 +205,17 @@ jobs:
       - name: Fetch and checkout QEMU source
         continue-on-error: true
         run: |
-          if [ "${{ steps.cache-include-lib.outputs.cache-hit }}" == 'true' ]; then
-            cd source
             echo "Downloading src"
-            wget -q https://download.qemu.org/qemu-${{ env.pkgver }}.tar.xz
-            echo "Extracting src"
-            tar xf qemu-${{ env.pkgver }}.tar.xz
-            cd ..            
-          fi
-          meson install -C build/libepoxy || true
+            mkdir -p source
+            cd source
+            if [ ! -d "qemu-${{ env.pkgver }}" ]; then
+              wget -q https://download.qemu.org/qemu-${{ env.pkgver }}.tar.xz
+              echo "Extracting src"
+              tar xf qemu-${{ env.pkgver }}.tar.xz
+            else
+              echo "QEMU source already exists, skipping download."
+            fi
+            cd ..
 
       - name: Create build/qemu directory        
         run: |
