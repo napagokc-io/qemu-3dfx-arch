@@ -271,7 +271,7 @@ jobs:
           echo "Installing build to output"
           make install || true
           cd ../../install_dir
-          bash ../../scripts/sign_binary          
+          bash ../scripts/sign_binary          
           cat <<EOF > version.txt
           QEMU-3dfx-arch (macOS Build)
           =================================================
