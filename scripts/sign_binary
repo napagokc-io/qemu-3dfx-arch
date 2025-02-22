@@ -111,13 +111,13 @@ exit 0
 
 # macOS
 elif [ "$platform" = 'mac' ]; then
-   if [ -f ./qemu-system-i386 ]; 
+   if [ -f ./bin/qemu-system-i386 ];
    then echo 'QEMU found!'
    else
       echo "qemu-system-i386 not found!"
       exit 1
    fi
-QEMUVERSION=$(./qemu-system-i386 --version | head -n 1 | grep -oP '(?<=version )\d+\.\d+\.\d+')
+QEMUVERSION=$(./bin/qemu-system-i386 --version | head -n 1 | grep -oP '(?<=version )\d+\.\d+\.\d+')
 cat <<EOF > build-timestamp.txt 
 Built on $(date +"%H:%M:%S %B %d %Y")
   $(brew list --versions binutils) 
