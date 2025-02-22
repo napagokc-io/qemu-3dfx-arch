@@ -271,6 +271,12 @@ jobs:
           echo "Installing build to output"
           make install || true
 
+      - name: Verify Qemu build
+        shell: bash
+        run: |
+          echo "Verifying Qemu build"
+          ls -la ./install_dir/bin    
+
       - name: Signing Binaries
         shell: bash
         continue-on-error: true
