@@ -104,7 +104,7 @@ cat <<EOF > version.txt
 QEMU-3dfx-arch (Arch Linux build)
 =================================================
 Version $(echo $QEMUVERSION.r$(git rev-list --count HEAD).$(git rev-parse --short=7 HEAD))
-Built using GCC $(gcc --version | head -n 1 | cut -d ' ' -f 3)
+Built using GCC $(gcc --version | head -n 1 | awk '{print $3}')
 EOF
 echo "Signed version.txt"
 exit 0
@@ -117,7 +117,7 @@ elif [ "$platform" = 'mac' ]; then
       echo "qemu-system-i386 not found!"
       exit 1
    fi
-QEMUVERSION=$(./bin/qemu-system-i386 --version | head -n 1 | grep -oP '(?<=version )\d+\.\d+\.\d+')
+QEMUVERSION=$(./bin/qemu-system-i386 --version | head -n 1 | awk '{print $4}')
 cat <<EOF > build-timestamp.txt 
 Built on $(date +"%H:%M:%S %B %d %Y")
   $(brew list --versions binutils) 
