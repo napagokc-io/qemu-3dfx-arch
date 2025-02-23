@@ -316,7 +316,7 @@ jobs:
           tar -cJf Binaries/qemu-${{ env.pkgver }}.tar.xz -C install_dir .
           tar -cJf Binaries/lib-${{ env.pkgver }}.tar.xz -C lib .
           tar -cJf Binaries/include-${{ env.pkgver }}.tar.xz -C include .
-          tar -cJf Binaries/build-qemu-${{ env.pkgver }}.tar.xz -C build/qemu .
+          tar -cJf Binaries/build-qemu-${{ env.pkgver }}.tar.xz -C build/angle .
 
       - name: Upload compressed QEMU binary as artifact
         continue-on-error: true
