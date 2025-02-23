@@ -450,17 +450,25 @@ jobs:
         name: wrappers-artifact
         path: ./wrappers
 
-    - name: Set TAG_NAME
-      run: echo "TAG_NAME=${{ env.pkgver }}-${{ github.run_id }}" >> $GITHUB_ENV
-     
-    - name: Create Release      
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: |
-          name: bin-windows-mingw64-${{ env.pkgver }}
-          path: ./install_dir
-          name: wrappers
-          path: ./wrappers
-        tag: ${{ env.TAG_NAME }}
-        file_glob: true        
+   Create_Release:
+     needs:
+       - MINGW64-Windows
+       - UCRT64-Windows
+       - Wrappers
+     runs-on: ubuntu-latest
+     env:
+       pkgver: "9.2.1"
+     steps:
+      - name: Set Release Tag
+        run: echo "RELEASE_TAG=${{ env.pkgver }}-${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.RELEASE_TAG }}
+          file: |
+            ./mingw64_artifact/**
+            ./ucrt64_artifact/**
+            ./wrappers_artifact/**
+          file_glob: true
