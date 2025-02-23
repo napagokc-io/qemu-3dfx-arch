@@ -308,4 +308,29 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qemu-binary-virgl-not-signed
-          path: ./install_dir      
+          path: ./install_dir
+          
+      - name: Compress QEMU binaries
+        run: |
+          mkdir -p Binaries
+          tar -cJf Binaries/qemu-${{ env.pkgver }}.tar.xz -C install_dir .
+          tar -cJf Binaries/lib-${{ env.pkgver }}.tar.xz -C lib .
+          tar -cJf Binaries/include-${{ env.pkgver }}.tar.xz -C include .
+          tar -cJf Binaries/build-qemu-${{ env.pkgver }}.tar.xz -C build/qemu .
+
+      - name: Upload compressed QEMU binary as artifact
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-binary-virgl
+          path: Binaries/qemu-${{ env.pkgver }}.tar.xz
+
+      - name: Upload to Release
+        continue-on-error: true
+        if: github.event_name == 'release'
+        uses: svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd # v2.9.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: Binaries/*.tar.xz
+          tag: ${{ github.ref }}
+          file_glob: true
