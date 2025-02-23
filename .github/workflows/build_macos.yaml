@@ -307,7 +307,7 @@ jobs:
       - name: Upload QEMU binary as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: qemu-binary-virgl-not-signed
+          name: qemu-binary-virgl
           path: ./install_dir
           
       - name: Compress QEMU binaries
