@@ -474,10 +474,20 @@ jobs:
         with:
           name: wrappers-artifact
           path: ./wrappers_artifact
+
+      # Debug: list contents of downloaded director
+      - name: Debug - List Downloaded Files
+        run: |
+          echo "Listing mingw64_artifact:"
+          find mingw64_artifact -type f || true
+          echo "Listing ucrt64_artifact:"
+          find ucrt64_artifact -type f || true
+          echo "Listing wrappers_artifact:"
+          find wrappers_artifact -type f || true    
     
        # Set the release tag:
        # If there's no release for the bare pkgver, use that as the first tag.
-       # Otherwise append an incremental value using github.run_number.
+       # Otherwise append an incremental value.
       - name: Set Release Tag
         id: set_release_tag
         shell: bash
@@ -486,22 +496,39 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PKGVER: ${{ env.pkgver }}
         run: |
-          echo "Checking if release tag ${PKGVER} exists..."
-          RESPONSE=$(curl -s -H "Authorization: token ${TOKEN}" "https://api.github.com/repos/${REPO}/releases/tags/${PKGVER}")
-          if echo "$RESPONSE" | grep -q "Not Found"; then
-            echo "Release tag ${PKGVER} not found. Using tag ${PKGVER} as first release."
-            echo "RELEASE_TAG=${PKGVER}" >> $GITHUB_ENV
+          echo "Fetching existing releases for repo ${REPO}..."
+          releases=$(curl -s -H "Authorization: token ${TOKEN}" "https://api.github.com/repos/${REPO}/releases")
+          
+          # Check if the base tag exists
+          base_exists=$(echo "$releases" | jq -r --arg t "$PKGVER" '.[].tag_name' | grep -Fx "$PKGVER" || true)
+          
+          if [ -z "$base_exists" ]; then
+             echo "Base tag ${PKGVER} does not exist. Using it as the release tag."
+             echo "RELEASE_TAG=${PKGVER}" >> "$GITHUB_ENV"
           else
-            echo "Release tag ${PKGVER} exists. Using incremental tag."
-            echo "RELEASE_TAG=${PKGVER}-${{ github.run_number }}" >> $GITHUB_ENV
+             echo "Base tag ${PKGVER} exists. Computing next incremental tag..."
+             max=0
+             for tag in $(echo "$releases" | jq -r --arg t "$PKGVER" '.[].tag_name' | grep "^${PKGVER}-"); do
+                 num=${tag#${PKGVER}-}
+                 if [[ $num =~ ^[0-9]+$ ]]; then
+                     if [ $num -gt $max ]; then
+                        max=$num
+                     fi
+                 fi
+             done
+             next=$((max + 1))
+             echo "Assigning tag ${PKGVER}-${next} as release tag."
+             echo "RELEASE_TAG=${PKGVER}-${next}" >> "$GITHUB_ENV"
           fi
+          echo "Final release tag set: $(grep RELEASE_TAG $GITHUB_ENV)"
+
       - name: Create Release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
           file: |
-            ${GITHUB_WORKSPACE}/mingw64_artifact/**
-            ${GITHUB_WORKSPACE}/ucrt64_artifact/**
-            ${GITHUB_WORKSPACE}/wrappers_artifact/**
+            ${{ github.workspace }}/mingw64_artifact/**/*
+            ${{ github.workspace }}/ucrt64_artifact/**/*
+            ${{ github.workspace }}/wrappers_artifact/**/*
           file_glob: true
