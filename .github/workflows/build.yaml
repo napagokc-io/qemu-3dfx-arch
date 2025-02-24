@@ -475,15 +475,23 @@ jobs:
           name: wrappers-artifact
           path: ./wrappers_artifact
 
-      # Debug: list contents of downloaded director
+      # Debug: list downloaded files
       - name: Debug - List Downloaded Files
         run: |
-          echo "Listing mingw64_artifact:"
-          find mingw64_artifact -type f || true
-          echo "Listing ucrt64_artifact:"
-          find ucrt64_artifact -type f || true
-          echo "Listing wrappers_artifact:"
-          find wrappers_artifact -type f || true    
+          echo "Files in mingw64_artifact:"
+          dir mingw64_artifact
+          echo "Files in ucrt64_artifact:"
+          dir ucrt64_artifact
+          echo "Files in wrappers_artifact:"
+          dir wrappers_artifact
+
+      - name: Compress Artifacts
+        run: |
+          mkdir -p Binaries
+          tar -cJf Binaries/qemu-${{ env.pkgver }}-mingw64.tar.xz -C mingw64_artifact .
+          tar -cJf Binaries/qemu-${{ env.pkgver }}-ucrt64.tar.xz -C ucrt64_artifact .
+          tar -cJf Binaries/qemu-${{ env.pkgver }}-wrappers.tar.xz -C wrappers_artifact .
+    
     
        # Set the release tag:
        # If there's no release for the bare pkgver, use that as the first tag.
@@ -528,5 +536,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
           file: |
-            file: "${{ github.workspace }}/mingw64_artifact/**/*,${{ github.workspace }}/ucrt64_artifact/**/*,${{ github.workspace }}/wrappers_artifact/**/*"
+            file: "Binaries/*.tar.xz"
           file_glob: true
