@@ -459,6 +459,17 @@ jobs:
      env:
        pkgver: "9.2.1"
      steps:
+
+      # Debug step: List files in download directories to verify artifacts are present
+      - name: List downloaded files
+        run: |
+          echo "Listing mingw64:"
+          find ./mingw64_artifact -type f || true
+          echo "Listing ucrt64:"
+          find ./ucrt64_artifact -type f || true
+          echo "Listing wrappers:"
+          find ./wrappers_artifact -type f || true
+
       - name: Set Release Tag
         run: echo "RELEASE_TAG=${{ env.pkgver }}-${{ github.run_id }}" >> $GITHUB_ENV
 
@@ -468,7 +479,10 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
           file: |
-            ./mingw64_artifact/**
-            ./ucrt64_artifact/**
-            ./wrappers_artifact/**
+            name: bin-windows-mingw64-${{ env.pkgver }}-artifact
+            path: ./install_dir
+            name: bin-windows-ucrt64-${{ env.pkgver }}-artifact
+            path: ./install_dir
+            name: wrappers-artifact
+            path: ./wrappers
           file_glob: true
