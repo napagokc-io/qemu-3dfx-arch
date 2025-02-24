@@ -459,30 +459,38 @@ jobs:
      env:
        pkgver: "9.2.1"
      steps:
-
-      # Debug step: List files in download directories to verify artifacts are present
-      - name: List downloaded files
-        run: |
-          echo "Listing mingw64:"
-          find ./mingw64_artifact -type f || true
-          echo "Listing ucrt64:"
-          find ./ucrt64_artifact -type f || true
-          echo "Listing wrappers:"
-          find ./wrappers_artifact -type f || true
-
-      - name: Set Release Tag
-        run: echo "RELEASE_TAG=${{ env.pkgver }}-${{ github.run_id }}" >> $GITHUB_ENV
-
-      - name: Create Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.RELEASE_TAG }}
-          file: |
-            name: bin-windows-mingw64-${{ env.pkgver }}-artifact
-            path: ./install_dir
-            name: bin-windows-ucrt64-${{ env.pkgver }}-artifact
-            path: ./install_dir
-            name: wrappers-artifact
-            path: ./wrappers
-          file_glob: true
+       - name: Download MINGW64 Artifact
+         uses: actions/download-artifact@v4
+         with:
+           name: bin-windows-mingw64-${{ env.pkgver }}-artifact
+           path: ./mingw64_artifact
+       - name: Download UCRT64 Artifact
+         uses: actions/download-artifact@v4
+         with:
+           name: bin-windows-ucrt64-${{ env.pkgver }}-artifact
+           path: ./ucrt64_artifact
+       - name: Download Wrappers Artifact
+         uses: actions/download-artifact@v4
+         with:
+           name: wrappers-artifact
+           path: ./wrappers_artifact
+       - name: Debug - List Downloaded Files
+         run: |
+           echo "Listing mingw64_artifact:"
+           find ./mingw64_artifact -type f || true
+           echo "Listing ucrt64_artifact:"
+           find ./ucrt64_artifact -type f || true
+           echo "Listing wrappers_artifact:"
+           find ./wrappers_artifact -type f || true
+       - name: Set Release Tag
+         run: echo "RELEASE_TAG=${{ env.pkgver }}-${{ github.run_id }}" >> $GITHUB_ENV
+       - name: Create Release
+         uses: svenstaro/upload-release-action@v2
+         with:
+           repo_token: ${{ secrets.GITHUB_TOKEN }}
+           tag: ${{ env.RELEASE_TAG }}
+           file: |
+             ./mingw64_artifact/**
+             ./ucrt64_artifact/**
+             ./wrappers_artifact/**
+           file_glob: true
