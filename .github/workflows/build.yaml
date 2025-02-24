@@ -501,7 +501,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
           file: |
-            mingw64_artifact/**
-            ucrt64_artifact/**
-            wrappers_artifact/**
+            ${GITHUB_WORKSPACE}/mingw64_artifact/**
+            ${GITHUB_WORKSPACE}/ucrt64_artifact/**
+            ${GITHUB_WORKSPACE}/wrappers_artifact/**
           file_glob: true
