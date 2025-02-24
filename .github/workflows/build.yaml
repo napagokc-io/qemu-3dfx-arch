@@ -451,46 +451,57 @@ jobs:
         path: ./wrappers
 
    Create_Release:
-     needs:
-       - MINGW64-Windows
-       - UCRT64-Windows
-       - Wrappers
-     runs-on: ubuntu-latest
-     env:
-       pkgver: "9.2.1"
-     steps:
-       - name: Download MINGW64 Artifact
-         uses: actions/download-artifact@v4
-         with:
-           name: bin-windows-mingw64-${{ env.pkgver }}-artifact
-           path: ./mingw64_artifact
-       - name: Download UCRT64 Artifact
-         uses: actions/download-artifact@v4
-         with:
-           name: bin-windows-ucrt64-${{ env.pkgver }}-artifact
-           path: ./ucrt64_artifact
-       - name: Download Wrappers Artifact
-         uses: actions/download-artifact@v4
-         with:
-           name: wrappers-artifact
-           path: ./wrappers_artifact
-       - name: Debug - List Downloaded Files
-         run: |
-           echo "Listing mingw64_artifact:"
-           find ./mingw64_artifact -type f || true
-           echo "Listing ucrt64_artifact:"
-           find ./ucrt64_artifact -type f || true
-           echo "Listing wrappers_artifact:"
-           find ./wrappers_artifact -type f || true
-       - name: Set Release Tag
-         run: echo "RELEASE_TAG=${{ env.pkgver }}-${{ github.run_id }}" >> $GITHUB_ENV
-       - name: Create Release
-         uses: svenstaro/upload-release-action@v2
-         with:
-           repo_token: ${{ secrets.GITHUB_TOKEN }}
-           tag: ${{ env.RELEASE_TAG }}
-           file: |
-             ./mingw64_artifact/**
-             ./ucrt64_artifact/**
-             ./wrappers_artifact/**
-           file_glob: true
+    needs:
+      - MINGW64-Windows
+      - UCRT64-Windows
+      - Wrappers
+    runs-on: ubuntu-latest
+    env:
+      pkgver: "9.2.1"
+    steps:
+      - name: Download MINGW64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bin-windows-mingw64-${{ env.pkgver }}-artifact
+          path: ./mingw64_artifact
+      - name: Download UCRT64 Artifact
+        uses: actions/download-artifact@v4
+        with:  
+          name: bin-windows-ucrt64-${{ env.pkgver }}-artifact
+          path: ./ucrt64_artifact
+      - name: Download Wrappers Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wrappers-artifact
+          path: ./wrappers_artifact
+    
+       # Set the release tag:
+       # If there's no release for the bare pkgver, use that as the first tag.
+       # Otherwise append an incremental value using github.run_number.
+      - name: Set Release Tag
+        id: set_release_tag
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PKGVER: ${{ env.pkgver }}
+        run: |
+          echo "Checking if release tag ${PKGVER} exists..."
+          RESPONSE=$(curl -s -H "Authorization: token ${TOKEN}" "https://api.github.com/repos/${REPO}/releases/tags/${PKGVER}")
+          if echo "$RESPONSE" | grep -q "Not Found"; then
+            echo "Release tag ${PKGVER} not found. Using tag ${PKGVER} as first release."
+            echo "RELEASE_TAG=${PKGVER}" >> $GITHUB_ENV
+          else
+            echo "Release tag ${PKGVER} exists. Using incremental tag."
+            echo "RELEASE_TAG=${PKGVER}-${{ github.run_number }}" >> $GITHUB_ENV
+          fi
+      - name: Create Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.RELEASE_TAG }}
+          file: |
+            mingw64_artifact/**
+            ucrt64_artifact/**
+            wrappers_artifact/**
+          file_glob: true
