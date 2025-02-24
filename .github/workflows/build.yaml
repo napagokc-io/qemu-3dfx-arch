@@ -528,7 +528,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
           file: |
-            ${{ github.workspace }}/mingw64_artifact/**/*
-            ${{ github.workspace }}/ucrt64_artifact/**/*
-            ${{ github.workspace }}/wrappers_artifact/**/*
+            file: "${{ github.workspace }}/mingw64_artifact/**/*,${{ github.workspace }}/ucrt64_artifact/**/*,${{ github.workspace }}/wrappers_artifact/**/*"
           file_glob: true
