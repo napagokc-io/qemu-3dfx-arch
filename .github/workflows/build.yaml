@@ -535,6 +535,5 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
-          file: |
-            file: "Binaries/*.tar.xz"
+          file: "Binaries/*.tar.xz"
           file_glob: true
