@@ -703,9 +703,9 @@ jobs:
         run: |
           mkdir -p Binaries
           tar -cJf Binaries/qemu-${{ env.pkgver }}-macos.tar.xz -C install_dir .
-          tar -cJf Binaries/lib-${{ env.pkgver }}.tar.xz -C lib .
-          tar -cJf Binaries/include-${{ env.pkgver }}.tar.xz -C include .
-          tar -cJf Binaries/build-angle-${{ env.pkgver }}.tar.xz -C build/angle .
+          tar -cJf Binaries/lib.tar.xz -C lib .
+          tar -cJf Binaries/include.tar.xz -C include .
+          tar -cJf Binaries/angle.tar.xz -C build/angle .
 
       - name: Upload Compressed macOS Binaries
         uses: actions/upload-artifact@v4
