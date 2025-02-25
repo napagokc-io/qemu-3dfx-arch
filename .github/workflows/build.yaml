@@ -702,7 +702,7 @@ jobs:
       - name: Compress QEMU binaries
         run: |
           mkdir -p Binaries
-          tar -cJf Binaries/qemu-${{ env.pkgver }}.tar.xz -C install_dir .
+          tar -cJf Binaries/qemu-${{ env.pkgver }}-macos.tar.xz -C install_dir .
           tar -cJf Binaries/lib-${{ env.pkgver }}.tar.xz -C lib .
           tar -cJf Binaries/include-${{ env.pkgver }}.tar.xz -C include .
           tar -cJf Binaries/build-angle-${{ env.pkgver }}.tar.xz -C build/angle .
@@ -759,7 +759,7 @@ jobs:
       - name: Compress Release Assets
         run: |
           mkdir -p ReleaseCompress
-          tar -cJf ReleaseCompress/qemu-${{ env.pkgver }}-release.tar.xz -C ReleaseAssets .
+          tar -cJf ReleaseCompress/qemu-and-wrappers-${{ env.pkgver }}-Windows.tar.xz -C ReleaseAssets .
 
       - name: Set Release Tag
         id: set_release_tag
